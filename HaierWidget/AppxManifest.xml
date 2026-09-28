@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  IgnorableNamespaces="uap uap3 rescap com">
+
+  <Identity Name="Xifan.HaierWidget" Publisher="CN=Xifan" Version="1.0.0.0" ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>海尔智家小组件</DisplayName>
+    <PublisherDisplayName>Xifan</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22621.0" MaxVersionTested="10.0.26200.0" />
+    <PackageDependency Name="Microsoft.WindowsAppRuntime.1.8" MinVersion="8000.616.304.0" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="zh-CN" />
+  </Resources>
+
+  <Applications>
+    <Application Id="App" Executable="HaierWidget.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="海尔智家小组件"
+        Description="在 Windows 11 小组件面板中查看和控制海尔智家设备"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:ExeServer Executable="HaierWidget.exe" Arguments="-RegisterProcessAsComServer" DisplayName="海尔智家小组件">
+              <com:Class Id="7C1B3A9E-6E2D-4C5A-9B1F-2D8E4F0A6C11" DisplayName="HaierWidgetProvider" />
+            </com:ExeServer>
+          </com:ComServer>
+        </com:Extension>
+        <uap3:Extension Category="windows.appExtension">
+          <uap3:AppExtension Name="com.microsoft.windows.widgets" DisplayName="海尔智家" Id="xifan.haier.widget" PublicFolder="Public">
+            <uap3:Properties>
+              <WidgetProvider>
+                <ProviderIcons>
+                  <Icon Path="Assets\WidgetIcon.png" />
+                </ProviderIcons>
+                <Activation>
+                  <CreateInstance ClassId="7C1B3A9E-6E2D-4C5A-9B1F-2D8E4F0A6C11" />
+                </Activation>
+                <Definitions>
+                  <Definition Id="HaierDevice"
+                    DisplayName="海尔智家设备"
+                    Description="显示一台海尔智家设备的状态，并可直接开关、调温、切换模式和风速"
+                    AllowMultiple="true"
+                    IsCustomizable="true">
+                    <Capabilities>
+                      <Capability>
+                        <Size Name="small" />
+                      </Capability>
+                      <Capability>
+                        <Size Name="medium" />
+                      </Capability>
+                      <Capability>
+                        <Size Name="large" />
+                      </Capability>
+                    </Capabilities>
+                    <ThemeResources>
+                      <Icons>
+                        <Icon Path="Assets\WidgetIcon.png" />
+                      </Icons>
+                      <Screenshots>
+                        <Screenshot Path="Assets\WidgetScreenshot.png" DisplayAltText="海尔空调控制卡片" />
+                      </Screenshots>
+                      <DarkMode />
+                      <LightMode />
+                    </ThemeResources>
+                  </Definition>
+                </Definitions>
+              </WidgetProvider>
+            </uap3:Properties>
+          </uap3:AppExtension>
+        </uap3:Extension>
+        <uap:Extension Category="windows.protocol">
+          <uap:Protocol Name="haierwidget">
+            <uap:DisplayName>海尔智家小组件</uap:DisplayName>
+          </uap:Protocol>
+        </uap:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

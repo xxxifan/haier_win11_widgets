@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.22621.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.22621.0</SupportedOSPlatformVersion>
+    <WindowsSdkPackageVersion>10.0.22621.38</WindowsSdkPackageVersion>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <SelfContained>false</SelfContained>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWindowsForms>true</UseWindowsForms>
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <EnableMsixTooling>false</EnableMsixTooling>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <AssemblyName>HaierWidget</AssemblyName>
+    <RootNamespace>HaierWidget</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK.Widgets" Version="1.8.250904007" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="1.8.250907003" />
+  </ItemGroup>
+</Project>

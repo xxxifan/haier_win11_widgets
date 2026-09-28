@@ -1,0 +1,16 @@
+# 登录会话 / 本地数据
+session.json
+*.log
+_old/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# C# / 发布产物
+publish/
+HaierWidget/bin/
+HaierWidget/obj/
+*.user
+.vs/

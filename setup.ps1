@@ -1,11 +1,13 @@
 # 编译并把海尔智家小组件注册到 Windows 11 小组件面板（需要开启“开发人员模式”）。
 # 用法：
-#   .\install.ps1             编译 + 注册（已注册则先卸载再注册）
-#   .\install.ps1 -SkipBuild  跳过编译，只重新注册
-#   .\install.ps1 -Uninstall  卸载
+#   .\setup.ps1             编译 + 注册（已注册则先卸载再注册）
+#   .\setup.ps1 -SkipBuild  跳过编译，只重新注册
+#   .\setup.ps1 -Uninstall  卸载
+#   .\setup.ps1 -Uninstall -Purge   卸载并清除登录态与缓存（不加 -Purge 会保留，重装后仍是登录状态）
 param(
     [switch]$Uninstall,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$Purge
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,7 +20,15 @@ function Remove-Existing {
     $pkg = Get-AppxPackage -Name $packageName -ErrorAction SilentlyContinue
     if ($pkg) {
         Write-Host "卸载已注册的包 $($pkg.PackageFullName) ..."
-        Remove-AppxPackage -Package $pkg.PackageFullName -PreserveApplicationData
+        if ($Purge) {
+            # 不加 -PreserveApplicationData，Windows 会连同 LocalState（session.json、models、widget.log）一起删掉
+            Write-Host "  同时清除应用数据（登录态、设备缓存、日志）"
+            Remove-AppxPackage -Package $pkg.PackageFullName
+        }
+        else {
+            # 默认保留 LocalState，重装后不用重新登录
+            Remove-AppxPackage -Package $pkg.PackageFullName -PreserveApplicationData
+        }
     }
 }
 

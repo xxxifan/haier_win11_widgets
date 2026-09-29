@@ -10,8 +10,6 @@ mode, fan and swing controls; state updates arrive over the Haier gateway WebSoc
 
 云端接口逻辑参考并感谢 [banto6/haier](https://github.com/banto6/haier)（Home Assistant 集成）。
 
-<p align="center"><img src="docs/widget-home.png" width="320" alt="总览卡（中尺寸）"></p>
-
 ## 功能
 
 - **总览卡**：每台设备一行，名称 + 状态摘要（模式 / 目标温度 / 风速 / 室温）+ 电源按钮。
@@ -40,14 +38,16 @@ mode, fan and swing controls; state updates arrive over the Haier gateway WebSoc
 ```powershell
 git clone https://github.com/xxxifan/haier_win11_widgets.git
 cd haier_win11_widgets
-.\install.ps1               # dotnet publish + 复制清单/图标 + Add-AppxPackage -Register
-.\install.ps1 -SkipBuild    # 只重新注册
-.\install.ps1 -Uninstall    # 卸载
+.\setup.ps1                     # dotnet publish + 复制清单/图标 + Add-AppxPackage -Register
+.\setup.ps1 -SkipBuild          # 只重新注册
+.\setup.ps1 -Uninstall          # 卸载（保留登录态与缓存）
+.\setup.ps1 -Uninstall -Purge   # 卸载并清除 LocalState（session.json、设备缓存、日志）
 ```
 
 脚本会：编译发布到 `publish\`，用 `AppxManifest.xml` 松散注册包 `Xifan.HaierWidget`，
 然后重启小组件面板的宿主进程（面板只在启动时枚举小组件提供程序，不重启就看不到新小组件）。
-重新安装会取消已固定的卡片，需要重新固定；登录会话保存在包的 `LocalState`，不会丢。
+重新安装会取消已固定的卡片，需要重新固定；登录会话保存在包的 `LocalState`，默认不会丢，
+所以重装后仍是登录状态、仍显示上次的设备 —— 想要干净的初始状态就加 `-Purge`。
 
 ## 使用
 
@@ -92,7 +92,7 @@ HaierWidget/                  C# 工程（.NET 8 + Windows App SDK 1.8 Widgets�
   Com/                        COM 类工厂
   Login/                      登录窗口（WinForms）
   Util/                       日志、路径、自检
-install.ps1                   编译 + 注册脚本
+setup.ps1                     编译 + 注册脚本
 python/                       Python 接口库（haier/）、命令行 cli.py、离线测试
 ```
 

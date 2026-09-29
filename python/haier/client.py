@@ -218,8 +218,10 @@ class HaierClient:
         return content.get("deviceinfos", [])
 
     async def get_devices(self) -> List[HaierDevice]:
-        """获取账号下绑定的所有设备。"""
-        return [HaierDevice(raw) for raw in await self.get_devices_raw()]
+        """获取账号下绑定的所有设备（按名称排序，保证多次调用顺序一致）。"""
+        devices = [HaierDevice(raw) for raw in await self.get_devices_raw()]
+        devices.sort(key=lambda d: (d.name, d.id))
+        return devices
 
     async def get_devices_online_status(self) -> Dict[str, bool]:
         return {d["deviceId"]: bool(d.get("online")) for d in await self.get_devices_raw()}

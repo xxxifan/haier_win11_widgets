@@ -191,6 +191,13 @@ public sealed class HaierApi
                 }
             }
         }
+        // 云端每次返回的顺序都可能不同，这里固定按名称（同名再按 deviceId）排序，
+        // 保证刷新后设备列表和小组件卡片不会换位置。
+        list.Sort(static (a, b) =>
+        {
+            var byName = string.CompareOrdinal(a.Name, b.Name);
+            return byName != 0 ? byName : string.CompareOrdinal(a.Id, b.Id);
+        });
         return list;
     }
 

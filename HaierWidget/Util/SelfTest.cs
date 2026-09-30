@@ -102,6 +102,29 @@ public static class SelfTest
             Expect(merged.Count == 3 && Json.Str(merged[0]!["desc"]) == "new" && Json.Str(merged[2]!["name"]) == "c", merged.ToJsonString());
         });
 
+        Check("关机时保留可写定义（温度控件不消失）", () =>
+        {
+            // 云端在关机时会把目标温度标成只读，直接覆盖会让温度行从卡片上消失
+            var off = new JsonArray();
+            foreach (var a in AcAttributes())
+            {
+                var o = (JsonObject)a!.DeepClone();
+                if (Json.Str(o["name"]) is "targetTemperature" or "operationMode" or "windSpeed")
+                {
+                    o["writable"] = false;
+                }
+                off.Add(o);
+            }
+            var offOnly = Capabilities.BuildControls(Capabilities.MergeAttributes(null, off)).ToDictionary(c => c.Key);
+            Expect(offOnly["targetTemperature"].Kind == Kind.Sensor, "无缓存时关机定义应为只读");
+
+            var merged = Capabilities.MergeAttributes(AcAttributes(), off);
+            var after = Capabilities.BuildControls(merged).ToDictionary(c => c.Key);
+            Expect(after["targetTemperature"].Kind == Kind.Temperature && after["targetTemperature"].MaxValue == 30, "温度控件应保留");
+            Expect(after["operationMode"].Kind == Kind.Mode && after["windSpeed"].Kind == Kind.Fan, "模式 / 风速应保留");
+            Expect(!Json.Bool(merged.First(a => Json.Str(a!["name"]) == "indoorTemperature")!["writable"]), "只读属性不应被置为可写");
+        });
+
         Check("卡片生成", () =>
         {
             var state = new DeviceState

@@ -351,30 +351,40 @@ public static class Capabilities
         return parts.Count > 0 ? string.Join(" · ", parts) : "在线";
     }
 
-    /// <summary>合并两份属性定义：按 name 去重，后者覆盖前者（用于按型号缓存）。</summary>
+    /// <summary>
+    /// 合并两份属性定义：按 name 去重，后者覆盖前者（用于按型号缓存）。
+    /// writable 例外，取“曾经可写”的并集：云端在关机时会把目标温度 / 模式 / 风速标成只读，
+    /// 若直接覆盖，这些控件会随关机从卡片上消失，开机后还得等下一次 HTTP 刷新才回来。
+    /// 关机时能不能点由 DeviceCard 按电源状态决定，与定义无关。
+    /// </summary>
     public static JsonArray MergeAttributes(JsonArray? cached, JsonArray fresh)
     {
         var byName = new Dictionary<string, JsonObject>();
         var order = new List<string>();
-        void Add(JsonArray arr)
+        void Add(JsonArray arr, bool keepWritable)
         {
             foreach (var a in arr)
             {
                 if (a is JsonObject o && Json.Str(o["name"]) is { Length: > 0 } n)
                 {
+                    var clone = (JsonObject)o.DeepClone();
+                    if (keepWritable && byName.TryGetValue(n, out var prev) && Json.Bool(prev["writable"]))
+                    {
+                        clone["writable"] = true;
+                    }
                     if (!byName.ContainsKey(n))
                     {
                         order.Add(n);
                     }
-                    byName[n] = (JsonObject)o.DeepClone();
+                    byName[n] = clone;
                 }
             }
         }
         if (cached is not null)
         {
-            Add(cached);
+            Add(cached, keepWritable: false);
         }
-        Add(fresh);
+        Add(fresh, keepWritable: true);
         var result = new JsonArray();
         foreach (var n in order)
         {

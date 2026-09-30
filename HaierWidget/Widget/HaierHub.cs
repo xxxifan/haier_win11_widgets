@@ -28,6 +28,13 @@ public sealed class HaierHub
     private static readonly TimeSpan DevicesTtl = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan ControlTimeout = TimeSpan.FromSeconds(8);
 
+    /// <summary>开 / 关机后隔多久重新拉数字模型；再隔多久补拉一次（云端影子翻转 writable 有延迟）。</summary>
+    private static readonly TimeSpan PowerRefreshDelay = TimeSpan.FromSeconds(1.5);
+    private static readonly TimeSpan PowerRefreshRetryDelay = TimeSpan.FromSeconds(4);
+
+    /// <summary>控件定义还没加载时，按云端通用的电源属性名判断。</summary>
+    private const string PowerKey = "onOffStatus";
+
     /// <summary>面板打开（Activate）触发的刷新：距上次刷新不足这个间隔就直接用缓存。</summary>
     public static readonly TimeSpan ActivateMinInterval = TimeSpan.FromSeconds(20);
 
@@ -40,6 +47,7 @@ public sealed class HaierHub
     private readonly SemaphoreSlim _sessionLock = new(1, 1);
     private readonly SemaphoreSlim _gatewayLock = new(1, 1);
     private readonly HashSet<string> _subscribed = new();
+    private readonly HashSet<string> _powerRefreshPending = new();
     private FileSystemWatcher? _watcher;
     private HaierSession? _session;
     private List<DeviceInfo>? _devices;
@@ -343,6 +351,47 @@ public sealed class HaierHub
         }
     }
 
+    /// <summary>是否为电源开关属性。</summary>
+    private static bool IsPowerKey(DeviceState? state, string key)
+    {
+        var power = state is null ? null : Capabilities.Find(state.Controls, Kind.Power);
+        return key == (power?.Key ?? PowerKey);
+    }
+
+    /// <summary>
+    /// 开 / 关机后重新拉一次数字模型。云端在关机时把目标温度、模式、风速标成只读，开机才恢复可写，
+    /// 而网关推送只带属性值不带定义，所以控件要靠这次 HTTP 刷新重建，否则卡片会停在开机前的样子。
+    /// 同一设备已有一次在排队时不重复排（连续开关机只刷最终状态）。
+    /// </summary>
+    private void SchedulePowerRefresh(string deviceId)
+    {
+        lock (_gate)
+        {
+            if (!_powerRefreshPending.Add(deviceId))
+            {
+                return;
+            }
+        }
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(PowerRefreshDelay);
+            lock (_gate)
+            {
+                _powerRefreshPending.Remove(deviceId);
+            }
+            try
+            {
+                await RefreshSnapshotAsync(new[] { deviceId });
+                await Task.Delay(PowerRefreshRetryDelay);
+                await RefreshSnapshotAsync(new[] { deviceId });
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"开关机后刷新 {deviceId} 失败: {ex.Message}");
+            }
+        });
+    }
+
     private JsonArray UpdateModelCache(string modelKey, JsonArray fresh)
     {
         var path = Path.Combine(Paths.ModelsDir, SafeFileName(modelKey) + ".json");
@@ -540,6 +589,7 @@ public sealed class HaierHub
     private void OnGatewayData(string deviceId, Dictionary<string, string> values)
     {
         DeviceState? state;
+        bool powerChanged = false;
         lock (_gate)
         {
             if (!_states.TryGetValue(deviceId, out state))
@@ -548,11 +598,19 @@ public sealed class HaierHub
             }
             foreach (var (k, v) in values)
             {
+                if (IsPowerKey(state, k) && (!state.Values.TryGetValue(k, out var old) || old != v))
+                {
+                    powerChanged = true;
+                }
                 state.Values[k] = v;
             }
             state.UpdatedAt = DateTime.Now;
             state.Online = true;
             state.Error = null;
+        }
+        if (powerChanged)
+        {
+            SchedulePowerRefresh(deviceId);
         }
         DeviceChanged?.Invoke(deviceId);
     }
@@ -603,6 +661,11 @@ public sealed class HaierHub
             else
             {
                 Log.Info($"控制成功 {deviceId} {key}={value}");
+                // 乐观更新已经写过本地值，网关推送回来不会再判定为“变化”，这里主动补一次
+                if (IsPowerKey(state, key) && previous != value)
+                {
+                    SchedulePowerRefresh(deviceId);
+                }
             }
         }
         catch (Exception ex)
